@@ -39,3 +39,31 @@
 
 # debug information files
 *.dwo
+
+#more visual studio stuff:
+.vs/
+*.user
+*.VC.db
+*.VC.opendb
+*.suo
+
+# Build output folders
+Debug/
+Release/
+x64/
+x86/
+ipch/
+out/
+bin/
+obj/
+
+# Generated binaries
+*.exp
+
+# Database temporary files
+*.db-wal
+*.db-shm
+
+# Logs and temp files
+*.log
+*.tmp 
