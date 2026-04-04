@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="P6Server/P6Server.vcxproj" />
+  <Project Path="P6Server/P6Server.vcxproj" Id="f52aa7c6-3c86-41d9-96d9-00331976d41a" />
 </Solution>

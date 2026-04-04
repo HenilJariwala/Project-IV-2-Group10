@@ -4,9 +4,11 @@ Purpose: Project 2 server - this is just the basic TCP startup and listening soc
 */
 
 #include "server.h"
+#include "client_handler.h"
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <iostream>
+#include <thread>
 
 #pragma comment(lib, "Ws2_32.lib")
 
@@ -18,7 +20,10 @@ int main()
 
     int port = SERVER_PORT;
 
-    std::cout << "Starting server..." << std::endl;
+    std::cout << "=============================" << std::endl;
+    std::cout << "     Starting server..." << std::endl;
+    std::cout << "=============================" << std::endl;
+
 
     //initailize Winsock
     int result = WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -65,14 +70,31 @@ int main()
         return 1;
     }
     std::cout << "Control tower is now scanning for planes..." << std::endl;
-
-    //keep the server running for now
     std::cout << "do Ctrl+C to stop the server for now" << std::endl;
+
     while (true)
     {
-        Sleep(1000);
-    }
+        SOCKET clientSocket = INVALID_SOCKET;
+        sockaddr_in clientAddr{};
+        int clientAddrSize = sizeof(clientAddr);
 
+        std::cout << "Waiting for an incoming client connectioon..." << std::endl;
+
+        clientSocket = accept(
+            listenSocket,
+            reinterpret_cast<sockaddr*>(&clientAddr),
+            &clientAddrSize
+        );
+
+        if (clientSocket == INVALID_SOCKET)
+        {
+            std::cerr << "accept() failed. With error code: " << WSAGetLastError() << std::endl;
+            continue;
+        }
+        
+        std::thread clientThread(HandleClient, clientSocket, clientAddr);
+        clientThread.detach();
+    }
 
     closesocket(listenSocket);
     WSACleanup();
