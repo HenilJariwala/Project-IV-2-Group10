@@ -1,5 +1,6 @@
 #include "client_handler.h"
-#include "server.h"
+#include "telemetry_packet.h"
+#include "flight_state.h"
 #include <ws2tcpip.h>
 #include <iostream>
 
@@ -11,9 +12,12 @@ void HandleClient(SOCKET clientSocket, sockaddr_in clientAddr)
     std::cout << "Aircraft client is being handled in a new thread: "
         << clientIp << ":" << ntohs(clientAddr.sin_port) << std::endl;
 
+    FlightState flightState;
+
     while (true)
     {
         TelemetryPacket packet{};
+
         int bytesReceived = recv(
             clientSocket,
             reinterpret_cast<char*>(&packet),
@@ -23,7 +27,7 @@ void HandleClient(SOCKET clientSocket, sockaddr_in clientAddr)
 
         if (bytesReceived == 0)
         {
-            std::cout << "Client disconnected cleanly: "
+            std::cout << "Plane landed like butter: "
                 << clientIp << ":" << ntohs(clientAddr.sin_port) << std::endl;
             break;
         }
@@ -45,21 +49,16 @@ void HandleClient(SOCKET clientSocket, sockaddr_in clientAddr)
             break;
         }
 
-        std::cout << "[Telemetry Received] "
-            << "Plane ID: " << packet.planeID
-            << ", Timestamp: " << packet.timestamp
-            << ", Remaining Fuel: " << packet.remainingFuel
-            << ", End Of Flight: " << (packet.endOfFlight ? "true" : "false")
-            << std::endl;
+        ProcessTelemetryPacket(packet, flightState);
 
         if (packet.endOfFlight)
         {
-            std::cout << "Plane " << packet.planeID << " has reached end of flight." << std::endl;
             break;
         }
     }
 
     closesocket(clientSocket);
 
-    std::cout << "Client socket closed: " << clientIp << ":" << ntohs(clientAddr.sin_port) << std::endl;
+    std::cout << "Client socket closed: "
+        << clientIp << ":" << ntohs(clientAddr.sin_port) << std::endl;
 }

@@ -1,6 +1,6 @@
 /*
 Author: Mohammad Aljabrery but this is a team effort really
-Purpose: Project 2 server - this is just the basic TCP startup and listening socket
+Purpose: Project 2 server
 */
 
 #include "server.h"

@@ -21,12 +21,27 @@
     <ClCompile Include="client_handler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="flight_state.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="time_utils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="server.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client_handler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="telemetry_packet.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="flight_state.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="time_utils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
