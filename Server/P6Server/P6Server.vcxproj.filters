@@ -27,6 +27,9 @@
     <ClCompile Include="time_utils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="result_storage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="server.h">
@@ -42,6 +45,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="time_utils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="flight_result.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="result_storage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

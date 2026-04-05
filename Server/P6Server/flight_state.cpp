@@ -1,5 +1,7 @@
 #include "flight_state.h"
 #include "time_utils.h"
+#include "flight_result.h"
+#include "result_storage.h"
 #include <iostream>
 #include <cstring>
 
@@ -96,6 +98,12 @@ void ProcessTelemetryPacket(const TelemetryPacket& packet, FlightState& state)
                 << packet.planeID
                 << ": " << averageFuelConsumptionRate
                 << " fuel units per second" << std::endl;
+
+            FlightResult result;
+            result.planeID = packet.planeID;
+            result.averageFuelConsumptionRate = averageFuelConsumptionRate;
+
+            SaveFlightResult(result);
         }
         else
         {

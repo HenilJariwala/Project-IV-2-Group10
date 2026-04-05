@@ -129,12 +129,15 @@
   <ItemGroup>
     <ClCompile Include="client_handler.cpp" />
     <ClCompile Include="flight_state.cpp" />
+    <ClCompile Include="result_storage.cpp" />
     <ClCompile Include="server.cpp" />
     <ClCompile Include="time_utils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="client_handler.h" />
+    <ClInclude Include="flight_result.h" />
     <ClInclude Include="flight_state.h" />
+    <ClInclude Include="result_storage.h" />
     <ClInclude Include="server.h" />
     <ClInclude Include="telemetry_packet.h" />
     <ClInclude Include="time_utils.h" />
