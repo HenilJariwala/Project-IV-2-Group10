@@ -138,6 +138,12 @@
     <ClInclude Include="scenario.h" />
     <ClInclude Include="telemetry_packet.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="katl-kefd-B737-700.txt" />
+    <Text Include="Telem_2023_3_12 14_56_40.txt" />
+    <Text Include="Telem_2023_3_12 16_26_4.txt" />
+    <Text Include="Telem_czba-cykf-pa28-w2_2023_3_1 12_31_27.txt" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

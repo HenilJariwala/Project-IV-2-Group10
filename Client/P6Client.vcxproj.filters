@@ -42,4 +42,18 @@
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="katl-kefd-B737-700.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Telem_2023_3_12 14_56_40.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Telem_2023_3_12 16_26_4.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Telem_czba-cykf-pa28-w2_2023_3_1 12_31_27.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+  </ItemGroup>
 </Project>
