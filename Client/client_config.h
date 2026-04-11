@@ -5,14 +5,10 @@
 
 struct ClientConfig
 {
-    std::string host = "127.0.0.1";
+    std::string host;
     unsigned short port = 18080;
-    unsigned int planeID = 1001;
-    unsigned int delayMs = 1000;
-    unsigned int packetCount = 5;
-    double startFuel = 1000.0;
-    double fuelStep = 25.0;
-    unsigned int intervalSeconds = 60;
+    unsigned int startPlaneID = 0;
+    unsigned int endPlaneID = 0;
 };
 
 bool ParseArguments(

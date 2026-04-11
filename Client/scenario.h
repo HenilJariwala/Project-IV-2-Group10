@@ -1,7 +1,6 @@
 #ifndef SCENARIO_H
 #define SCENARIO_H
 
-#include "client_config.h"
 #include "telemetry_packet.h"
 
 #include <string>
@@ -9,7 +8,13 @@
 
 using FlightScenario = std::vector<TelemetryPacket>;
 
-FlightScenario BuildScenario(const ClientConfig& config);
+bool LoadScenarioFromFile(
+    const std::string& filePath,
+    unsigned int planeID,
+    FlightScenario& scenario,
+    std::string& errorMessage
+);
+
 bool ValidateScenario(const FlightScenario& scenario, std::string& errorMessage);
 
 #endif

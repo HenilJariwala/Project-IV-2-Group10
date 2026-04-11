@@ -13,13 +13,13 @@ int main(int argc, char* argv[])
     if (!ParseArguments(argc, argv, config, showHelp, errorMessage))
     {
         std::cerr << errorMessage << std::endl;
-        PrintUsage((argc > 0 && argv[0] != nullptr) ? argv[0] : "P6Client.exe");
+        PrintUsage((argc > 0 && argv[0] != nullptr) ? argv[0] : "client.exe");
         return 1;
     }
 
     if (showHelp)
     {
-        PrintUsage((argc > 0 && argv[0] != nullptr) ? argv[0] : "P6Client.exe");
+        PrintUsage((argc > 0 && argv[0] != nullptr) ? argv[0] : "client.exe");
         return 0;
     }
 

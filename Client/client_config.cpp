@@ -6,84 +6,21 @@
 
 namespace
 {
-enum class OptionMatchResult
-{
-    NotMatched,
-    Matched,
-    Error
-};
-
-OptionMatchResult TryGetOptionValue(
-    int argc,
-    char* argv[],
-    int& index,
-    const std::string& argument,
-    const std::string& optionName,
-    std::string& value,
-    std::string& errorMessage
-)
-{
-    const std::string option = "--" + optionName;
-    const std::string prefix = option + "=";
-
-    if (argument.rfind(prefix, 0) == 0)
+    bool ParseUnsignedLongValue(const std::string& text, unsigned long& value)
     {
-        value = argument.substr(prefix.size());
-        if (value.empty())
+        std::size_t consumedCharacters = 0;
+
+        try
         {
-            errorMessage = "Missing value for option " + option + ".";
-            return OptionMatchResult::Error;
+            value = std::stoul(text, &consumedCharacters);
+        }
+        catch (...)
+        {
+            return false;
         }
 
-        return OptionMatchResult::Matched;
+        return consumedCharacters == text.size();
     }
-
-    if (argument == option)
-    {
-        if (index + 1 >= argc)
-        {
-            errorMessage = "Missing value for option " + option + ".";
-            return OptionMatchResult::Error;
-        }
-
-        value = argv[++index];
-        return OptionMatchResult::Matched;
-    }
-
-    return OptionMatchResult::NotMatched;
-}
-
-bool ParseUnsignedLongValue(const std::string& text, unsigned long& value)
-{
-    std::size_t consumedCharacters = 0;
-
-    try
-    {
-        value = std::stoul(text, &consumedCharacters);
-    }
-    catch (...)
-    {
-        return false;
-    }
-
-    return consumedCharacters == text.size();
-}
-
-bool ParseDoubleValue(const std::string& text, double& value)
-{
-    std::size_t consumedCharacters = 0;
-
-    try
-    {
-        value = std::stod(text, &consumedCharacters);
-    }
-    catch (...)
-    {
-        return false;
-    }
-
-    return consumedCharacters == text.size();
-}
 }
 
 bool ParseArguments(
@@ -97,185 +34,58 @@ bool ParseArguments(
     showHelp = false;
     errorMessage.clear();
 
-    for (int index = 1; index < argc; ++index)
+    if (argc >= 2)
     {
-        const std::string argument = argv[index];
-
-        if (argument == "--help" || argument == "-h")
+        const std::string firstArgument = argv[1];
+        if (firstArgument == "--help" || firstArgument == "-h")
         {
             showHelp = true;
             return true;
         }
+    }
 
-        std::string value;
-
-        OptionMatchResult result =
-            TryGetOptionValue(argc, argv, index, argument, "host", value, errorMessage);
-        if (result == OptionMatchResult::Error)
-        {
-            return false;
-        }
-        if (result == OptionMatchResult::Matched)
-        {
-            config.host = value;
-            continue;
-        }
-
-        result = TryGetOptionValue(argc, argv, index, argument, "port", value, errorMessage);
-        if (result == OptionMatchResult::Error)
-        {
-            return false;
-        }
-        if (result == OptionMatchResult::Matched)
-        {
-            unsigned long parsedPort = 0;
-            if (!ParseUnsignedLongValue(value, parsedPort) || parsedPort == 0 || parsedPort > 65535)
-            {
-                errorMessage = "Invalid value for --port. Expected an integer between 1 and 65535.";
-                return false;
-            }
-
-            config.port = static_cast<unsigned short>(parsedPort);
-            continue;
-        }
-
-        result = TryGetOptionValue(argc, argv, index, argument, "plane-id", value, errorMessage);
-        if (result == OptionMatchResult::Error)
-        {
-            return false;
-        }
-        if (result == OptionMatchResult::Matched)
-        {
-            unsigned long parsedPlaneID = 0;
-            if (!ParseUnsignedLongValue(value, parsedPlaneID) ||
-                parsedPlaneID > std::numeric_limits<unsigned int>::max())
-            {
-                errorMessage = "Invalid value for --plane-id. Expected a non-negative integer.";
-                return false;
-            }
-
-            config.planeID = static_cast<unsigned int>(parsedPlaneID);
-            continue;
-        }
-
-        result = TryGetOptionValue(argc, argv, index, argument, "delay-ms", value, errorMessage);
-        if (result == OptionMatchResult::Error)
-        {
-            return false;
-        }
-        if (result == OptionMatchResult::Matched)
-        {
-            unsigned long parsedDelay = 0;
-            if (!ParseUnsignedLongValue(value, parsedDelay) ||
-                parsedDelay > std::numeric_limits<unsigned int>::max())
-            {
-                errorMessage = "Invalid value for --delay-ms. Expected a non-negative integer.";
-                return false;
-            }
-
-            config.delayMs = static_cast<unsigned int>(parsedDelay);
-            continue;
-        }
-
-        result = TryGetOptionValue(argc, argv, index, argument, "packet-count", value, errorMessage);
-        if (result == OptionMatchResult::Error)
-        {
-            return false;
-        }
-        if (result == OptionMatchResult::Matched)
-        {
-            unsigned long parsedPacketCount = 0;
-            if (!ParseUnsignedLongValue(value, parsedPacketCount) ||
-                parsedPacketCount > std::numeric_limits<unsigned int>::max())
-            {
-                errorMessage = "Invalid value for --packet-count. Expected a positive integer.";
-                return false;
-            }
-
-            config.packetCount = static_cast<unsigned int>(parsedPacketCount);
-            continue;
-        }
-
-        result = TryGetOptionValue(argc, argv, index, argument, "start-fuel", value, errorMessage);
-        if (result == OptionMatchResult::Error)
-        {
-            return false;
-        }
-        if (result == OptionMatchResult::Matched)
-        {
-            double parsedStartFuel = 0.0;
-            if (!ParseDoubleValue(value, parsedStartFuel))
-            {
-                errorMessage = "Invalid value for --start-fuel. Expected a numeric value.";
-                return false;
-            }
-
-            config.startFuel = parsedStartFuel;
-            continue;
-        }
-
-        result = TryGetOptionValue(argc, argv, index, argument, "fuel-step", value, errorMessage);
-        if (result == OptionMatchResult::Error)
-        {
-            return false;
-        }
-        if (result == OptionMatchResult::Matched)
-        {
-            double parsedFuelStep = 0.0;
-            if (!ParseDoubleValue(value, parsedFuelStep))
-            {
-                errorMessage = "Invalid value for --fuel-step. Expected a numeric value.";
-                return false;
-            }
-
-            config.fuelStep = parsedFuelStep;
-            continue;
-        }
-
-        result = TryGetOptionValue(argc, argv, index, argument, "interval-seconds", value, errorMessage);
-        if (result == OptionMatchResult::Error)
-        {
-            return false;
-        }
-        if (result == OptionMatchResult::Matched)
-        {
-            unsigned long parsedIntervalSeconds = 0;
-            if (!ParseUnsignedLongValue(value, parsedIntervalSeconds) ||
-                parsedIntervalSeconds > std::numeric_limits<unsigned int>::max())
-            {
-                errorMessage = "Invalid value for --interval-seconds. Expected a non-negative integer.";
-                return false;
-            }
-
-            config.intervalSeconds = static_cast<unsigned int>(parsedIntervalSeconds);
-            continue;
-        }
-
-        errorMessage = "Unknown option: " + argument;
+    if (argc != 4)
+    {
+        errorMessage = "Expected exactly 3 arguments: ServerIP startID endID";
         return false;
     }
+
+    config.host = argv[1];
 
     if (config.host.empty())
     {
-        errorMessage = "The --host value cannot be empty.";
+        errorMessage = "ServerIP cannot be empty.";
         return false;
     }
 
-    if (config.fuelStep <= 0.0)
+    unsigned long parsedStartID = 0;
+    if (!ParseUnsignedLongValue(argv[2], parsedStartID) ||
+        parsedStartID > std::numeric_limits<unsigned int>::max())
     {
-        errorMessage = "The --fuel-step value must be greater than 0.";
+        errorMessage = "Invalid startID. Expected a non-negative integer.";
         return false;
     }
 
-    if (config.intervalSeconds == 0)
+    unsigned long parsedEndID = 0;
+    if (!ParseUnsignedLongValue(argv[3], parsedEndID) ||
+        parsedEndID > std::numeric_limits<unsigned int>::max())
     {
-        errorMessage = "The --interval-seconds value must be greater than 0.";
+        errorMessage = "Invalid endID. Expected a non-negative integer.";
         return false;
     }
 
-    if (config.packetCount < 2)
+    config.startPlaneID = static_cast<unsigned int>(parsedStartID);
+    config.endPlaneID = static_cast<unsigned int>(parsedEndID);
+
+    if (config.startPlaneID == 0)
     {
-        errorMessage = "The --packet-count value must be at least 2.";
+        errorMessage = "startID must be at least 1.";
+        return false;
+    }
+
+    if (config.endPlaneID < config.startPlaneID)
+    {
+        errorMessage = "endID must be greater than or equal to startID.";
         return false;
     }
 
@@ -285,24 +95,12 @@ bool ParseArguments(
 void PrintUsage(const char* executableName)
 {
     std::cout
-        << "Usage: " << executableName
-        << " [--host value] [--port value] [--plane-id value]"
-        << " [--delay-ms value] [--packet-count value]"
-        << " [--start-fuel value] [--fuel-step value]"
-        << " [--interval-seconds value]" << std::endl
-        << std::endl
-        << "Defaults:" << std::endl
-        << "  --host=127.0.0.1" << std::endl
-        << "  --port=18080" << std::endl
-        << "  --plane-id=1001" << std::endl
-        << "  --delay-ms=1000" << std::endl
-        << "  --packet-count=5" << std::endl
-        << "  --start-fuel=1000" << std::endl
-        << "  --fuel-step=25" << std::endl
-        << "  --interval-seconds=60" << std::endl
+        << "Usage: " << executableName << " ServerIP startID endID" << std::endl
         << std::endl
         << "Example:" << std::endl
-        << "  " << executableName
-        << " --plane-id 2007 --packet-count 6 --fuel-step 30 --delay-ms 500"
-        << std::endl;
+        << "  " << executableName << " localhost 1 20" << std::endl
+        << std::endl
+        << "This will launch one client thread per plane ID in the given range." << std::endl
+        << "Each client chooses one telemetry file randomly, opens its own TCP connection," << std::endl
+        << "sends all real telemetry lines, then sends one extra final packet with endOfFlight=true." << std::endl;
 }
