@@ -11,6 +11,7 @@
 #include <random>
 #include <string>
 #include <thread>
+#include <unordered_map>
 #include <vector>
 
 #ifdef _MSC_VER
@@ -31,6 +32,8 @@ namespace
 
     std::mutex g_consoleMutex;
     std::mutex g_randomMutex;
+    std::mutex g_scenarioCacheMutex;
+    std::unordered_map<std::string, FlightScenario> g_scenarioCache;
 
     void LogLine(const std::string& text)
     {
@@ -49,6 +52,32 @@ namespace
         return TELEMETRY_FILES[distribution(generator)];
     }
 
+    const FlightScenario* GetCachedScenario(
+        const std::string& fileName,
+        std::string& errorMessage)
+    {
+        {
+            std::lock_guard<std::mutex> lock(g_scenarioCacheMutex);
+            const auto it = g_scenarioCache.find(fileName);
+            if (it != g_scenarioCache.end())
+            {
+                return &it->second;
+            }
+        }
+
+        FlightScenario loadedScenario;
+        constexpr unsigned int CACHE_PLANE_ID = 0;
+
+        if (!LoadScenarioFromFile(fileName, CACHE_PLANE_ID, loadedScenario, errorMessage))
+        {
+            return nullptr;
+        }
+
+        std::lock_guard<std::mutex> lock(g_scenarioCacheMutex);
+        auto [it, inserted] = g_scenarioCache.emplace(fileName, std::move(loadedScenario));
+        return &it->second;
+    }
+
     void RunSinglePlaneClient(const ClientConfig& baseConfig, unsigned int planeID)
     {
         ClientConfig planeConfig = baseConfig;
@@ -56,10 +85,10 @@ namespace
 
         LogLine("Plane " + std::to_string(planeID) + " selected file: " + fileName);
 
-        FlightScenario scenario;
         std::string errorMessage;
+        const FlightScenario* scenario = GetCachedScenario(fileName, errorMessage);
 
-        if (!LoadScenarioFromFile(fileName, planeID, scenario, errorMessage))
+        if (scenario == nullptr)
         {
             LogLine("Plane " + std::to_string(planeID) + " failed to load scenario: " + errorMessage);
             return;
@@ -67,8 +96,8 @@ namespace
 
         LogLine(
             "Plane " + std::to_string(planeID) +
-            " loaded " + std::to_string(scenario.size()) +
-            " packets from file."
+            " reused cached scenario with " + std::to_string(scenario->size()) +
+            " packets."
         );
 
         SOCKET clientSocket = ConnectToServer(planeConfig, errorMessage);
@@ -80,15 +109,15 @@ namespace
 
         LogLine("Plane " + std::to_string(planeID) + " connected successfully.");
 
-        for (std::size_t packetIndex = 0; packetIndex < scenario.size(); ++packetIndex)
+        for (std::size_t packetIndex = 0; packetIndex < scenario->size(); ++packetIndex)
         {
-            TelemetryPacket packet = scenario[packetIndex];
+            TelemetryPacket packet = (*scenario)[packetIndex];
             packet.planeID = planeID;
 
             LogLine(
                 "Plane " + std::to_string(planeID) +
                 " | Sending packet " + std::to_string(packetIndex + 1) +
-                "/" + std::to_string(scenario.size())
+                "/" + std::to_string(scenario->size())
             );
 
             int bytesWritten = 0;
@@ -100,21 +129,23 @@ namespace
                     ": " + errorMessage
                 );
 
+                shutdown(clientSocket, SD_BOTH);
                 closesocket(clientSocket);
                 return;
             }
 
-            if (packetIndex + 1 < scenario.size())
+            if (packetIndex + 1 < scenario->size())
             {
                 std::this_thread::sleep_for(std::chrono::milliseconds(PACKET_DELAY_MS));
             }
         }
 
+        shutdown(clientSocket, SD_SEND);
         closesocket(clientSocket);
 
         LogLine(
             "Plane " + std::to_string(planeID) +
-            " finished sending " + std::to_string(scenario.size()) +
+            " finished sending " + std::to_string(scenario->size()) +
             " packets and disconnected."
         );
     }
@@ -260,6 +291,7 @@ int RunClient(const ClientConfig& config)
     );
 
     std::vector<std::thread> clientThreads;
+    clientThreads.reserve(static_cast<std::size_t>(config.endPlaneID - config.startPlaneID + 1));
 
     for (unsigned int planeID = config.startPlaneID; planeID <= config.endPlaneID; ++planeID)
     {

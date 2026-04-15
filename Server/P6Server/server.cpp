@@ -7,10 +7,46 @@ Purpose: Project 2 server
 #include "client_handler.h"
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <condition_variable>
+#include <cstddef>
 #include <iostream>
+#include <mutex>
+#include <queue>
 #include <thread>
+#include <utility>
+#include <vector>
 
 #pragma comment(lib, "Ws2_32.lib")
+
+namespace
+{
+    struct ClientJob
+    {
+        SOCKET socket = INVALID_SOCKET;
+        sockaddr_in address{};
+    };
+
+    std::mutex g_queueMutex;
+    std::condition_variable g_queueCondition;
+    std::queue<ClientJob> g_pendingClients;
+
+    void WorkerLoop()
+    {
+        while (true)
+        {
+            ClientJob job;
+
+            {
+                std::unique_lock<std::mutex> lock(g_queueMutex);
+                g_queueCondition.wait(lock, [] { return !g_pendingClients.empty(); });
+                job = g_pendingClients.front();
+                g_pendingClients.pop();
+            }
+
+            HandleClient(job.socket, job.address);
+        }
+    }
+}
 
 int main()
 {
@@ -44,6 +80,15 @@ int main()
     }
     std::cout << "Listening socket has been created successfully. \\o/ " << std::endl;
 
+    BOOL reuseAddress = TRUE;
+    setsockopt(
+        listenSocket,
+        SOL_SOCKET,
+        SO_REUSEADDR,
+        reinterpret_cast<const char*>(&reuseAddress),
+        sizeof(reuseAddress)
+    );
+
     //configure the server address
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_addr.s_addr = INADDR_ANY;
@@ -72,6 +117,22 @@ int main()
     std::cout << "Control tower is now scanning for planes..." << std::endl;
     std::cout << "do Ctrl+C to stop the server for now" << std::endl;
 
+    unsigned int workerCount = std::thread::hardware_concurrency();
+    if (workerCount == 0)
+    {
+        workerCount = 4;
+    }
+
+    std::vector<std::thread> workers;
+    workers.reserve(workerCount);
+
+    for (unsigned int index = 0; index < workerCount; ++index)
+    {
+        workers.emplace_back(WorkerLoop);
+    }
+
+    std::cout << "Started " << workerCount << " reusable worker threads." << std::endl;
+
     while (true)
     {
         SOCKET clientSocket = INVALID_SOCKET;
@@ -92,8 +153,19 @@ int main()
             continue;
         }
         
-        std::thread clientThread(HandleClient, clientSocket, clientAddr);
-        clientThread.detach();
+        {
+            std::lock_guard<std::mutex> lock(g_queueMutex);
+            g_pendingClients.push(ClientJob{ clientSocket, clientAddr });
+        }
+        g_queueCondition.notify_one();
+    }
+
+    for (std::thread& worker : workers)
+    {
+        if (worker.joinable())
+        {
+            worker.join();
+        }
     }
 
     closesocket(listenSocket);
