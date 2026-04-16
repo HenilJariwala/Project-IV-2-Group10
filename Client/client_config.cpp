@@ -1,3 +1,13 @@
+/**
+ * @file client_config.cpp
+ * @brief Implements command-line parsing and configuration handling.
+ *
+ * Provides functionality to parse input arguments, validate values,
+ * and guide users with proper usage instructions.
+ *
+ * @author Henil
+ * @date 2026
+ */
 #include "client_config.h"
 
 #include <iostream>
@@ -5,7 +15,16 @@
 #include <string>
 
 namespace
-{
+{   
+ /**
+ * @brief Converts a string to an unsigned long value.
+ *
+ * Ensures that the entire string is a valid numeric value.
+ *
+ * @param text Input string
+ * @param value Parsed numeric value
+ * @return true if conversion is successful, false otherwise
+ */
     bool ParseUnsignedLongValue(const std::string& text, unsigned long& value)
     {
         std::size_t consumedCharacters = 0;
@@ -23,6 +42,13 @@ namespace
     }
 }
 
+/**
+ * @brief Validates and parses command-line arguments.
+ *
+ * Checks for help flag, validates argument count, and ensures that
+ * start and end IDs are within valid ranges before assigning them
+ * to the configuration structure.
+ */
 bool ParseArguments(
     int argc,
     char* argv[],
@@ -37,6 +63,7 @@ bool ParseArguments(
     if (argc >= 2)
     {
         const std::string firstArgument = argv[1];
+        // Check if user requested help information
         if (firstArgument == "--help" || firstArgument == "-h")
         {
             showHelp = true;
@@ -44,6 +71,7 @@ bool ParseArguments(
         }
     }
 
+    // Ensure correct number of arguments are provided
     if (argc != 4)
     {
         errorMessage = "Expected exactly 3 arguments: ServerIP startID endID";
@@ -51,13 +79,14 @@ bool ParseArguments(
     }
 
     config.host = argv[1];
-
+    // Validate that server address is not empty
     if (config.host.empty())
     {
         errorMessage = "ServerIP cannot be empty.";
         return false;
     }
 
+    // Parse and validate starting plane ID
     unsigned long parsedStartID = 0;
     if (!ParseUnsignedLongValue(argv[2], parsedStartID) ||
         parsedStartID > std::numeric_limits<unsigned int>::max())
@@ -66,6 +95,7 @@ bool ParseArguments(
         return false;
     }
 
+    // Parse and validate ending plane ID
     unsigned long parsedEndID = 0;
     if (!ParseUnsignedLongValue(argv[3], parsedEndID) ||
         parsedEndID > std::numeric_limits<unsigned int>::max())
@@ -83,6 +113,7 @@ bool ParseArguments(
         return false;
     }
 
+    // Ensure end ID is not less than start ID
     if (config.endPlaneID < config.startPlaneID)
     {
         errorMessage = "endID must be greater than or equal to startID.";
@@ -92,6 +123,9 @@ bool ParseArguments(
     return true;
 }
 
+/**
+ * @brief Displays correct usage format and example execution.
+ */
 void PrintUsage(const char* executableName)
 {
     std::cout
