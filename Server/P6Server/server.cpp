@@ -3,9 +3,12 @@ Author: Mohammad Aljabrery but this is a team effort really
 Purpose: Project 2 server
 */
 
+#include <algorithm>
+#include <chrono>
 #include "server.h"
 #include "client_handler.h"
 #include <winsock2.h>
+#include <Windows.h>
 #include <ws2tcpip.h>
 #include <condition_variable>
 #include <cstddef>
@@ -30,15 +33,68 @@ namespace
     std::condition_variable g_queueCondition;
     std::queue<ClientJob> g_pendingClients;
 
+    std::mutex g_workerMutex;
+    std::vector<std::thread> g_workers;
+    unsigned int g_activeWorkers = 0;
+
+    constexpr unsigned int MIN_WORKERS = 4;
+    constexpr unsigned int MAX_WORKERS = 64;
+    constexpr auto WORKER_IDLE_TIMEOUT = std::chrono::seconds(15);
+
+    void CleanupFinishedWorkers()
+    {
+        std::lock_guard<std::mutex> lock(g_workerMutex);
+
+        auto it = g_workers.begin();
+        while (it != g_workers.end())
+        {
+            if (it->joinable())
+            {
+                DWORD result = WaitForSingleObject(
+                    reinterpret_cast<HANDLE>(it->native_handle()),
+                    0
+                );
+
+                if (result == WAIT_OBJECT_0)
+                {
+                    it->join();
+                    it = g_workers.erase(it);
+                    continue;
+                }
+            }
+
+            ++it;
+        }
+    }
+
     void WorkerLoop()
     {
         while (true)
         {
-            ClientJob job;
+            ClientJob job{};
 
             {
                 std::unique_lock<std::mutex> lock(g_queueMutex);
-                g_queueCondition.wait(lock, [] { return !g_pendingClients.empty(); });
+
+                bool gotJob = g_queueCondition.wait_for(
+                    lock,
+                    WORKER_IDLE_TIMEOUT,
+                    [] { return !g_pendingClients.empty(); }
+                );
+
+                if (!gotJob)
+                {
+                    if (g_activeWorkers > MIN_WORKERS)
+                    {
+                        --g_activeWorkers;
+                        std::cout << "Idle worker exiting. Active workers: "
+                            << g_activeWorkers << std::endl;
+                        return;
+                    }
+
+                    continue;
+                }
+
                 job = g_pendingClients.front();
                 g_pendingClients.pop();
             }
@@ -46,7 +102,34 @@ namespace
             HandleClient(job.socket, job.address);
         }
     }
+
+    void EnsureWorkerCapacity()
+    {
+        std::lock_guard<std::mutex> queueLock(g_queueMutex);
+
+        const std::size_t pendingCount = g_pendingClients.size();
+
+        if (pendingCount > g_activeWorkers && g_activeWorkers < MAX_WORKERS)
+        {
+            unsigned int workersToAdd =
+                static_cast<unsigned int>(
+                    std::min<std::size_t>(pendingCount - g_activeWorkers, MAX_WORKERS - g_activeWorkers)
+                    );
+
+            std::lock_guard<std::mutex> workerLock(g_workerMutex);
+
+            for (unsigned int i = 0; i < workersToAdd; ++i)
+            {
+                g_workers.emplace_back(WorkerLoop);
+                ++g_activeWorkers;
+            }
+
+            std::cout << "Scaled worker pool. Active workers: "
+                << g_activeWorkers << std::endl;
+        }
+    }
 }
+
 
 int main()
 {
@@ -117,21 +200,16 @@ int main()
     std::cout << "Control tower is now scanning for planes..." << std::endl;
     std::cout << "do Ctrl+C to stop the server for now" << std::endl;
 
-    unsigned int workerCount = std::thread::hardware_concurrency();
-    if (workerCount == 0)
     {
-        workerCount = 4;
+        std::lock_guard<std::mutex> workerLock(g_workerMutex);
+        for (unsigned int index = 0; index < MIN_WORKERS; ++index)
+        {
+            g_workers.emplace_back(WorkerLoop);
+            ++g_activeWorkers;
+        }
     }
 
-    std::vector<std::thread> workers;
-    workers.reserve(workerCount);
-
-    for (unsigned int index = 0; index < workerCount; ++index)
-    {
-        workers.emplace_back(WorkerLoop);
-    }
-
-    std::cout << "Started " << workerCount << " reusable worker threads." << std::endl;
+    std::cout << "Started " << MIN_WORKERS << " base worker threads." << std::endl;
 
     while (true)
     {
@@ -157,15 +235,10 @@ int main()
             std::lock_guard<std::mutex> lock(g_queueMutex);
             g_pendingClients.push(ClientJob{ clientSocket, clientAddr });
         }
-        g_queueCondition.notify_one();
-    }
 
-    for (std::thread& worker : workers)
-    {
-        if (worker.joinable())
-        {
-            worker.join();
-        }
+        EnsureWorkerCapacity();
+        g_queueCondition.notify_one();
+        CleanupFinishedWorkers();
     }
 
     closesocket(listenSocket);
