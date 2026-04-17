@@ -1,7 +1,13 @@
-/*
-Author: Mohammad Aljabrery but this is a team effort really
-Purpose: Project 2 server
-*/
+/**
+ * @file server.cpp
+ * @brief Implements the main multi-threaded telemetry server, including socket setup, worker thread management, and client connection acceptance.
+ * @author Mohammad Aljabery
+ */
+
+ /*
+ Author: Mohammad Aljabrery and improved by Henil Jariwala
+ Purpose: Project 2 server
+ */
 
 #include <algorithm>
 #include <chrono>
@@ -23,6 +29,10 @@ Purpose: Project 2 server
 
 namespace
 {
+
+    /**
+     * @brief Represents a pending client connection waiting to be processed by a worker thread.
+     */
     struct ClientJob
     {
         SOCKET socket = INVALID_SOCKET;
@@ -41,6 +51,9 @@ namespace
     constexpr unsigned int MAX_WORKERS = 64;
     constexpr auto WORKER_IDLE_TIMEOUT = std::chrono::seconds(15);
 
+    /**
+     * @brief Joins and removes worker threads that have already finished execution.
+     */
     void CleanupFinishedWorkers()
     {
         std::lock_guard<std::mutex> lock(g_workerMutex);
@@ -67,6 +80,10 @@ namespace
         }
     }
 
+
+    /**
+     * @brief Waits for pending client jobs and processes them using a worker thread.
+     */
     void WorkerLoop()
     {
         while (true)
@@ -131,6 +148,14 @@ namespace
 }
 
 
+
+/**
+ * @brief Initializes the server, starts the worker thread pool, accepts incoming client connections,
+ *        and dispatches connected clients for telemetry processing.
+ * @author Mohammad Aljabery
+ * @return Returns 0 if the server shuts down normally, or 1 if initialization, socket creation,
+ *         binding, or listening fails.
+ */
 int main()
 {
     WSADATA wsaData;

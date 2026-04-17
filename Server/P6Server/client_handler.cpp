@@ -1,3 +1,9 @@
+/**
+ * @file client_handler.cpp
+ * @brief Implements client connection handling and reliable telemetry packet reception.
+ * @author Mohammad Aljabery
+ */
+
 #include "client_handler.h"
 #include "telemetry_packet.h"
 #include "flight_state.h"
@@ -7,6 +13,14 @@
 
 namespace
 {
+    /**
+     * @brief Receives an exact number of bytes from a client socket.
+     * @param clientSocket The socket connected to the client.
+     * @param buffer The buffer that stores the received data.
+     * @param bufferSize The total number of bytes expected.
+     * @param errorMessage A message describing the receive failure if one occurs.
+     * @return true if the full buffer was received successfully, otherwise false.
+     */
     bool ReceiveAll(SOCKET clientSocket, char* buffer, int bufferSize, std::string& errorMessage)
     {
         int totalBytesReceived = 0;
@@ -39,6 +53,11 @@ namespace
     }
 }
 
+/**
+ * @brief Handles communication with one connected aircraft client.
+ * @param clientSocket The socket used to communicate with the client.
+ * @param clientAddr The network address information of the connected client.
+ */
 void HandleClient(SOCKET clientSocket, sockaddr_in clientAddr)
 {
     char clientIp[INET_ADDRSTRLEN] = {};
@@ -64,6 +83,7 @@ void HandleClient(SOCKET clientSocket, sockaddr_in clientAddr)
                 << " disconnected or failed receive: " << errorMessage << std::endl;
             break;
         }
+
         ProcessTelemetryPacket(packet, flightState);
 
         if (packet.endOfFlight)

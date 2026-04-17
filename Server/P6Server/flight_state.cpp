@@ -1,3 +1,9 @@
+/**
+ * @file flight_state.cpp
+ * @brief Implements telemetry packet processing and fuel consumption calculations for each flight.
+ * @author Mohammad Aljabery
+ */
+
 #include "flight_state.h"
 #include "time_utils.h"
 #include "flight_result.h"
@@ -5,6 +11,11 @@
 #include <iostream>
 #include <cstring>
 
+ /**
+  * @brief Processes a telemetry packet and updates the flight state for an aircraft.
+  * @param packet The telemetry packet received from the client.
+  * @param state The flight state being updated for the aircraft.
+  */
 void ProcessTelemetryPacket(const TelemetryPacket& packet, FlightState& state)
 {
     std::cout << "Plane " << packet.planeID
